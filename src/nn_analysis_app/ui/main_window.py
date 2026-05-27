@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 from PyQt5.QtCore import QThreadPool, Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QAction,
     QApplication,
@@ -277,9 +277,50 @@ class MainWindow(QMainWindow):
             QPushButton:disabled { background: #aab4bf; }
             QLineEdit, QSpinBox, QComboBox, QTextEdit, QTableWidget {
                 background: white;
+                color: #111827;
+                selection-background-color: #cfe4ff;
+                selection-color: #111827;
                 border: 1px solid #cfd7df;
                 border-radius: 6px;
                 padding: 5px;
+            }
+            QComboBox QAbstractItemView {
+                background: #ffffff;
+                color: #111827;
+                selection-background-color: #d9ebff;
+                selection-color: #111827;
+            }
+            QTableWidget {
+                gridline-color: #d8dee6;
+                alternate-background-color: #f8fafc;
+            }
+            QTableWidget::item {
+                color: #111827;
+                background: #ffffff;
+            }
+            QTableWidget::item:selected {
+                color: #111827;
+                background: #d9ebff;
+            }
+            QHeaderView::section {
+                background: #eef2f7;
+                color: #111827;
+                border: 1px solid #d8dee6;
+                padding: 6px;
+                font-weight: 600;
+            }
+            QTabBar::tab {
+                background: #e9eef5;
+                color: #293241;
+                border: 1px solid #d8dee6;
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 7px 12px;
+            }
+            QTabBar::tab:selected {
+                background: #ffffff;
+                color: #111827;
             }
             #logBox {
                 background: #101820;
@@ -593,6 +634,7 @@ class MainWindow(QMainWindow):
         for row_index, (_, row) in enumerate(dataframe.iterrows()):
             for col_index, value in enumerate(row):
                 item = QTableWidgetItem("" if pd.isna(value) else str(value))
+                item.setForeground(QColor("#111827"))
                 item.setFlags(item.flags() ^ Qt.ItemIsEditable)
                 table.setItem(row_index, col_index, item)
         table.resizeColumnsToContents()

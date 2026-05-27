@@ -4,8 +4,20 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from matplotlib import rcParams
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+
+
+rcParams["font.sans-serif"] = [
+    "Microsoft YaHei",
+    "SimHei",
+    "PingFang SC",
+    "Heiti SC",
+    "Arial Unicode MS",
+    "DejaVu Sans",
+]
+rcParams["axes.unicode_minus"] = False
 
 
 class PlotCanvas(FigureCanvas):

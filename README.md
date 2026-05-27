@@ -186,6 +186,35 @@ console=False
 - pandas/openpyxl/xlrd：用于 Excel 读写，发布前请用 `.xlsx` 与 `.xls` 样例分别测试。
 - seaborn：依赖 matplotlib，打包后请测试绘图窗口和图表保存功能。
 
+## Conda 离线包部署
+
+如果希望目标机器依然运行在 conda 环境下，但不要求目标机器联网或预装 conda，可以使用 `conda-pack` 生成离线包。
+
+联网构建机执行：
+
+```bash
+conda activate nn-analysis
+python scripts/build_offline_package.py
+```
+
+生成包位于 `dist/`。目标机器解压后直接运行：
+
+macOS/Linux：
+
+```bash
+./scripts/run_app.command
+```
+
+Windows：
+
+```bat
+scripts\run_app.bat
+```
+
+首次启动会自动把内置环境包解压到 `runtime/env`，执行 `conda-unpack` 修复路径，然后打开软件。详细限制见 `OFFLINE_DEPLOY.md`。
+
+注意：`conda-pack` 包不能跨平台。Windows 包需要在 Windows 构建，macOS Intel 和 Apple Silicon 也建议分别构建。
+
 ## 常见问题
 
 **1. 打包后启动失败，提示缺少 sklearn 或 statsmodels 模块。**
