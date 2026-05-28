@@ -53,13 +53,19 @@ def test_main_window_import_signal_loads_and_preprocesses_excel(tmp_path):
     assert "数据导入完成" in window.log_panel.output.toPlainText()
 
 
-def test_ui_exposes_preprocessing_and_split_controls():
+def test_data_import_and_ml_preprocess_controls_are_separated():
     app = _app()
     assert app is not None
     window = MainWindow()
 
-    assert window.data_page.missing_strategy.count() >= 3
-    assert window.data_page.scaler.count() >= 3
+    assert window.data_page.feature_count.value() == 3
+    assert window.data_page.target_count.value() == 1
+    assert not hasattr(window.data_page, "missing_strategy")
+    assert not hasattr(window.data_page, "scaler")
+    assert not hasattr(window.data_page, "fill_value")
+    assert window.ml_preprocess_page.missing_strategy.count() >= 3
+    assert window.ml_preprocess_page.scaler.count() >= 3
+    assert window.ml_preprocess_page.fill_value.value() == 0.0
     assert window.train_page.test_size.value() == 0.2
 
 

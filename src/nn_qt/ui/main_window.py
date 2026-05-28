@@ -117,18 +117,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 feature_count=feature_count,
                 target_count=target_count,
             )
-            preprocess_config = PreprocessConfig(
-                missing_strategy=self.data_page.missing_strategy.currentText(),
-                scaler=self.data_page.scaler.currentText(),
-                fill_value=self.data_page.fill_value.value(),
-            )
+            preprocess_config = self._current_ml_preprocess_config()
             self.processed_bundle = self.data_service.preprocess(
                 self.dataset_bundle,
                 preprocess_config,
             )
             self._populate_table(self.data_page.preview, df)
             self.ml_preprocess_page.set_summary(
-                f"已按导入页设置完成预处理\n"
+                f"已按机器学习预处理页设置完成预处理\n"
                 f"样本数：{len(self.processed_bundle.X)}\n"
                 f"输入变量：{len(self.processed_bundle.feature_names)}\n"
                 f"输出变量：{len(self.processed_bundle.target_names)}"
@@ -140,6 +136,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("数据导入完成")
         except Exception as exc:
             self._show_error(str(exc))
+
+    def _current_ml_preprocess_config(self) -> PreprocessConfig:
+        return PreprocessConfig(
+            missing_strategy=self.ml_preprocess_page.missing_strategy.currentText(),
+            scaler=self.ml_preprocess_page.scaler.currentText(),
+            fill_value=self.ml_preprocess_page.fill_value.value(),
+        )
 
     def _handle_ml_preprocess_requested(
         self,
@@ -162,9 +165,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.dataset_bundle,
                 config,
             )
-            self.data_page.missing_strategy.setCurrentText(missing_strategy)
-            self.data_page.scaler.setCurrentText(scaler)
-            self.data_page.fill_value.setValue(fill_value)
             self.train_page.test_size.setValue(test_size)
             self._ml_random_state = random_state
             self.ml_preprocess_page.set_summary(
