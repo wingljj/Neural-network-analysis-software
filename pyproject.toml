@@ -1,0 +1,10 @@
+[project]
+name = "nn-qt"
+version = "0.1.0"
+description = "Qt desktop software for data analysis and neural network prediction."
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra --basetemp=.pytest_tmp"
