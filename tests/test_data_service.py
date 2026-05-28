@@ -17,6 +17,48 @@ def test_split_features_targets_uses_front_n_and_back_m_columns():
     assert bundle.y.shape == (2, 1)
 
 
+def test_split_features_targets_by_names_allows_explicit_column_roles():
+    df = pd.DataFrame(
+        {
+            "sample_id": ["A", "B"],
+            "temp": [20.0, 25.0],
+            "pressure": [1.1, 1.3],
+            "strength": [300.0, 320.0],
+            "yield": [0.82, 0.85],
+        }
+    )
+
+    bundle = DataService().split_features_targets_by_names(
+        df,
+        feature_columns=["temp", "pressure"],
+        target_columns=["strength"],
+    )
+
+    assert bundle.feature_names == ["temp", "pressure"]
+    assert bundle.target_names == ["strength"]
+    assert list(bundle.X.columns) == ["temp", "pressure"]
+    assert list(bundle.y.columns) == ["strength"]
+    assert bundle.X.shape == (2, 2)
+    assert bundle.y.shape == (2, 1)
+
+
+def test_split_features_targets_by_names_rejects_invalid_column_roles():
+    df = pd.DataFrame({"x1": [1.0], "x2": [2.0], "y": [3.0]})
+    service = DataService()
+
+    with pytest.raises(ValueError, match="至少选择一个输入变量"):
+        service.split_features_targets_by_names(df, [], ["y"])
+
+    with pytest.raises(ValueError, match="至少选择一个输出变量"):
+        service.split_features_targets_by_names(df, ["x1"], [])
+
+    with pytest.raises(ValueError, match="不能同时作为输入和输出"):
+        service.split_features_targets_by_names(df, ["x1"], ["x1"])
+
+    with pytest.raises(ValueError, match="不存在"):
+        service.split_features_targets_by_names(df, ["x1", "missing"], ["y"])
+
+
 def test_split_features_targets_rejects_invalid_column_counts():
     df = pd.DataFrame({"x1": [1], "y": [2]})
 

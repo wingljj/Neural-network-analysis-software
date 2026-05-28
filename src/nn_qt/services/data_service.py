@@ -50,6 +50,45 @@ class DataService:
 
         feature_columns = list(df.columns[:feature_count])
         target_columns = list(df.columns[-target_count:])
+        return self.split_features_targets_by_names(df, feature_columns, target_columns)
+
+    def split_features_targets_by_names(
+        self,
+        df: pd.DataFrame,
+        feature_columns: list,
+        target_columns: list,
+    ) -> DatasetBundle:
+        """按用户选择的列名切分输入变量和输出变量。"""
+
+        feature_columns = list(feature_columns)
+        target_columns = list(target_columns)
+        if not feature_columns:
+            raise ValueError("至少选择一个输入变量")
+        if not target_columns:
+            raise ValueError("至少选择一个输出变量")
+
+        duplicated_features = self._duplicated_values(feature_columns)
+        duplicated_targets = self._duplicated_values(target_columns)
+        if duplicated_features or duplicated_targets:
+            raise ValueError(
+                "输入变量或输出变量中存在重复列: "
+                f"{duplicated_features + duplicated_targets}"
+            )
+
+        overlap = [
+            column for column in feature_columns if column in set(target_columns)
+        ]
+        if overlap:
+            raise ValueError(f"同一列不能同时作为输入和输出: {overlap}")
+
+        missing_columns = [
+            column
+            for column in feature_columns + target_columns
+            if column not in df.columns
+        ]
+        if missing_columns:
+            raise ValueError(f"选择的列在 Excel 中不存在: {missing_columns}")
+
         feature_names = [str(column) for column in feature_columns]
         target_names = [str(column) for column in target_columns]
         X = df.loc[:, feature_columns].copy()
@@ -63,6 +102,15 @@ class DataService:
             feature_names=feature_names,
             target_names=target_names,
         )
+
+    def _duplicated_values(self, values: list) -> list:
+        seen = set()
+        duplicates = []
+        for value in values:
+            if value in seen and value not in duplicates:
+                duplicates.append(value)
+            seen.add(value)
+        return duplicates
 
     def preprocess(
         self,

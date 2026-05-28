@@ -50,6 +50,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dataset_bundle = None
         self.processed_bundle = None
         self.train_result = None
+        self._raw_df = None
         self._last_data_path: str | None = None
         self._last_model_dir: Path | None = None
         self._ml_random_state = 42
@@ -65,6 +66,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.sidebar.page_changed.connect(self.stack.setCurrentIndex)
         self.data_page.import_requested.connect(self._handle_import_requested)
+        self.data_page.columns_selected.connect(self._handle_columns_selected)
         self.ml_preprocess_page.preprocess_requested.connect(
             self._handle_ml_preprocess_requested
         )
@@ -98,44 +100,79 @@ class MainWindow(QtWidgets.QMainWindow):
         refresh_sidebar_metrics(self.sidebar)
         self.setStyleSheet(white_theme_stylesheet())
 
-    def _handle_import_requested(
-        self,
-        path: str,
-        feature_count: int,
-        target_count: int,
-    ) -> None:
+    def _handle_import_requested(self, path: str) -> None:
         try:
-            df = self.data_service.load_excel(
-                ExcelLoadConfig(
-                    path=path,
-                    feature_count=feature_count,
-                    target_count=target_count,
-                )
-            )
-            self.dataset_bundle = self.data_service.split_features_targets(
-                df,
-                feature_count=feature_count,
-                target_count=target_count,
-            )
-            preprocess_config = self._current_ml_preprocess_config()
-            self.processed_bundle = self.data_service.preprocess(
-                self.dataset_bundle,
-                preprocess_config,
-            )
+            df = self.data_service.load_excel(ExcelLoadConfig(path=path))
+            self._raw_df = df
+            self.dataset_bundle = None
+            self.processed_bundle = None
             self._populate_table(self.data_page.preview, df)
-            self.ml_preprocess_page.set_summary(
-                f"已按机器学习预处理页设置完成预处理\n"
-                f"样本数：{len(self.processed_bundle.X)}\n"
-                f"输入变量：{len(self.processed_bundle.feature_names)}\n"
-                f"输出变量：{len(self.processed_bundle.target_names)}"
-            )
+            self.data_page.set_columns(list(df.columns))
             self._last_data_path = path
             self.log_panel.append_log(
                 f"数据导入完成：{len(df)} 行，{len(df.columns)} 列"
             )
-            self.statusBar().showMessage("数据导入完成")
+            feature_columns, target_columns = (
+                self.data_page.selected_feature_target_columns()
+            )
+            try:
+                self._apply_selected_columns(feature_columns, target_columns)
+                self.statusBar().showMessage("数据导入完成")
+            except Exception as exc:
+                self.ml_preprocess_page.set_summary(
+                    "数据已导入，默认变量设置暂不能预处理\n"
+                    f"原因：{exc}\n"
+                    "请在数据导入页调整输入/输出列后应用。"
+                )
+                self.log_panel.append_log(f"默认变量预处理失败：{exc}")
+                self.statusBar().showMessage("数据已导入，请调整变量设置")
         except Exception as exc:
             self._show_error(str(exc))
+
+    def _handle_columns_selected(
+        self,
+        feature_columns: list,
+        target_columns: list,
+    ) -> None:
+        if self._raw_df is None:
+            self._show_error("请先导入 Excel 数据")
+            return
+        try:
+            self._apply_selected_columns(feature_columns, target_columns)
+            self.log_panel.append_log(
+                f"变量设置已应用：输入 {len(feature_columns)} 列，"
+                f"输出 {len(target_columns)} 列"
+            )
+            self.statusBar().showMessage("变量设置已应用")
+        except Exception as exc:
+            self._show_error(str(exc))
+
+    def _apply_selected_columns(
+        self,
+        feature_columns: list,
+        target_columns: list,
+    ) -> None:
+        if self._raw_df is None:
+            raise ValueError("请先导入 Excel 数据")
+
+        dataset_bundle = self.data_service.split_features_targets_by_names(
+            self._raw_df,
+            feature_columns=feature_columns,
+            target_columns=target_columns,
+        )
+        preprocess_config = self._current_ml_preprocess_config()
+        processed_bundle = self.data_service.preprocess(
+            dataset_bundle,
+            preprocess_config,
+        )
+        self.dataset_bundle = dataset_bundle
+        self.processed_bundle = processed_bundle
+        self.ml_preprocess_page.set_summary(
+            f"已按当前变量设置完成预处理\n"
+            f"样本数：{len(self.processed_bundle.X)}\n"
+            f"输入变量：{len(self.processed_bundle.feature_names)}\n"
+            f"输出变量：{len(self.processed_bundle.target_names)}"
+        )
 
     def _current_ml_preprocess_config(self) -> PreprocessConfig:
         return PreprocessConfig(

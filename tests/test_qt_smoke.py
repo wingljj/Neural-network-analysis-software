@@ -45,11 +45,13 @@ def test_main_window_import_signal_loads_and_preprocesses_excel(tmp_path):
     )
     window = MainWindow()
 
-    window.data_page.import_requested.emit(str(path), 2, 1)
+    window.data_page.import_requested.emit(str(path))
 
     assert window.dataset_bundle is not None
     assert window.processed_bundle is not None
     assert window.data_page.preview.rowCount() == 3
+    assert window.data_page.column_roles.rowCount() == 3
+    assert window.data_page.selected_feature_target_columns() == (["x1", "x2"], ["y"])
     assert "数据导入完成" in window.log_panel.output.toPlainText()
 
 
@@ -58,15 +60,42 @@ def test_data_import_and_ml_preprocess_controls_are_separated():
     assert app is not None
     window = MainWindow()
 
-    assert window.data_page.feature_count.value() == 3
-    assert window.data_page.target_count.value() == 1
+    assert not hasattr(window.data_page, "feature_count")
+    assert not hasattr(window.data_page, "target_count")
     assert not hasattr(window.data_page, "missing_strategy")
     assert not hasattr(window.data_page, "scaler")
     assert not hasattr(window.data_page, "fill_value")
+    assert hasattr(window.data_page, "column_roles")
+    assert hasattr(window.data_page, "apply_columns_button")
     assert window.ml_preprocess_page.missing_strategy.count() >= 3
     assert window.ml_preprocess_page.scaler.count() >= 3
     assert window.ml_preprocess_page.fill_value.value() == 0.0
     assert window.train_page.test_size.value() == 0.2
+
+
+def test_column_roles_can_be_changed_after_import(tmp_path):
+    app = _app()
+    assert app is not None
+    path = tmp_path / "data.xlsx"
+    pd.DataFrame({"x1": [1.0, 2.0], "x2": [3.0, 4.0], "y": [5.0, 6.0]}).to_excel(
+        path,
+        index=False,
+    )
+    window = MainWindow()
+    window.data_page.import_requested.emit(str(path))
+
+    window.data_page.set_column_role("x1", "输出变量")
+    window.data_page.set_column_role("x2", "输入变量")
+    window.data_page.set_column_role("y", "忽略")
+    window.data_page.apply_columns_button.click()
+
+    assert window.dataset_bundle is not None
+    assert window.processed_bundle is not None
+    assert window.dataset_bundle.feature_names == ["x2"]
+    assert window.dataset_bundle.target_names == ["x1"]
+    assert window.processed_bundle.feature_names == ["x2"]
+    assert window.processed_bundle.target_names == ["x1"]
+    assert "变量设置已应用" in window.log_panel.output.toPlainText()
 
 
 def test_machine_learning_preprocess_page_reprocesses_imported_dataset(tmp_path):
@@ -78,7 +107,7 @@ def test_machine_learning_preprocess_page_reprocesses_imported_dataset(tmp_path)
         index=False,
     )
     window = MainWindow()
-    window.data_page.import_requested.emit(str(path), 2, 1)
+    window.data_page.import_requested.emit(str(path))
 
     window.ml_preprocess_page.missing_strategy.setCurrentText("median")
     window.ml_preprocess_page.scaler.setCurrentText("minmax")
